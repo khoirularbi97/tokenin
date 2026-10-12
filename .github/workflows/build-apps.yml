@@ -1,0 +1,148 @@
+# Membangun aplikasi Tokenin untuk Windows, macOS, Linux, dan Android di server GitHub.
+#
+# Sebelum menjalankan: Settings > Secrets and variables > Actions > tab Variables >
+# New repository variable, nama VITE_API_URL, isi alamat backend Render
+# (contoh: https://tokenin-api.onrender.com).
+#
+# Cara menjalankan:
+#  - Manual: tab Actions > "Build aplikasi" > Run workflow. Hasilnya di bagian Artifacts.
+#  - Rilis: buat tag v1.0.0 lalu push. Hasilnya otomatis dilampirkan ke halaman Releases.
+
+name: Build aplikasi
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+env:
+  VITE_API_URL: ${{ vars.VITE_API_URL }}
+
+jobs:
+  check:
+    name: Cek pengaturan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pastikan VITE_API_URL sudah diisi
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "::error::Variable VITE_API_URL belum diisi. Buka Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+          echo "Server: $VITE_API_URL"
+
+  desktop:
+    name: Desktop (${{ matrix.name }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            files: desktop/release/*.exe
+          - os: macos-latest
+            name: macOS
+            files: desktop/release/*.dmg
+          - os: ubuntu-latest
+            name: Linux
+            files: desktop/release/*.AppImage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Pasang dependensi desktop
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build web dan salin ke aplikasi
+        working-directory: desktop
+        run: |
+          npm run build:web
+          npm run copy:web
+
+      - name: Uji penyajian file aplikasi
+        working-directory: desktop
+        run: npm test
+
+      - name: Kemas installer
+        working-directory: desktop
+        env:
+          # Belum ada sertifikat tanda tangan kode; installer tetap bisa dipasang
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npx electron-builder --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tokenin-${{ matrix.name }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+  android:
+    name: Android
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build web dan salin ke proyek Android
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Beri nama APK
+        run: |
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          mkdir -p out
+          cp frontend/android/app/build/outputs/apk/debug/app-debug.apk "out/Tokenin-$VERSION-android.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tokenin-Android
+          path: out/*.apk
+          if-no-files-found: error
+
+  release:
+    name: Lampirkan ke Releases
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [desktop, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

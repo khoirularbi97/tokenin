@@ -1,0 +1,82 @@
+{
+  "name": "tokenin-desktop",
+  "productName": "Tokenin",
+  "version": "1.0.0",
+  "description": "Isi token listrik dari mana saja",
+  "author": "Khoirul Arbi",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "build:web": "npm --prefix ../frontend ci && npm --prefix ../frontend run build",
+    "copy:web": "node scripts/copy-renderer.mjs",
+    "start": "npm run copy:web && electron .",
+    "dev": "electron . --dev-url=http://localhost:5173",
+    "dist": "npm run build:web && npm run copy:web && electron-builder --publish never",
+    "dist:win": "npm run build:web && npm run copy:web && electron-builder --win --publish never",
+    "dist:mac": "npm run build:web && npm run copy:web && electron-builder --mac --publish never",
+    "dist:linux": "npm run build:web && npm run copy:web && electron-builder --linux --publish never",
+    "test": "node --test test/serve.test.js"
+  },
+  "build": {
+    "appId": "id.tokenin.desktop",
+    "productName": "Tokenin",
+    "copyright": "Copyright © 2026 Khoirul Arbi",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "serve.js",
+      "assets/**",
+      "renderer/**",
+      "package.json"
+    ],
+    "artifactName": "Tokenin-${version}-${os}-${arch}.${ext}",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "shortcutName": "Tokenin"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  }
+}

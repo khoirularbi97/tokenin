@@ -5,6 +5,7 @@ import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import DeviceDetail from './pages/DeviceDetail.jsx';
 import AddDevice from './pages/AddDevice.jsx';
+import { useAndroidBackButton } from './lib/native.js';
 
 function Protected() {
   const { loggedIn } = useAuth();
@@ -22,6 +23,7 @@ function Protected() {
 }
 
 export default function App() {
+  useAndroidBackButton();
   return (
     <Routes>
       <Route path="/masuk" element={<Login />} />

@@ -81,6 +81,15 @@
   color-scheme: light;
 }
 
+/* ---------- Area aman layar (notch, status bar, gesture bar) ----------
+   env() dipakai browser dan iOS; --safe-area-inset-* disuntikkan Capacitor di Android lama. */
+:root {
+  --sat: max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px));
+  --sab: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px));
+  --sal: max(env(safe-area-inset-left, 0px), var(--safe-area-inset-left, 0px));
+  --sar: max(env(safe-area-inset-right, 0px), var(--safe-area-inset-right, 0px));
+}
+
 /* ---------- Dasar ---------- */
 *,
 *::before,
@@ -101,7 +110,20 @@ body {
   font-family: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
   font-size: 16px;
   line-height: 1.5;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding: 0 var(--sar) var(--sab) var(--sal);
+}
+
+/* Rasa aplikasi native di Android dan iOS */
+html[data-platform='android'],
+html[data-platform='ios'] {
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+html[data-platform='android'] button,
+html[data-platform='ios'] button,
+html[data-platform^='desktop'] button {
+  user-select: none;
+  -webkit-user-select: none;
 }
 a {
   color: var(--link);
@@ -163,7 +185,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: calc(14px + env(safe-area-inset-top, 0px)) 24px 14px;
+  padding: calc(14px + var(--sat)) 24px 14px;
   background: var(--header);
   border-bottom: 1px solid var(--line);
 }
@@ -736,7 +758,7 @@ td {
 /* ---------- Halaman login ---------- */
 .login-wrap {
   min-height: 100vh;
-  padding: 24px;
+  padding: calc(24px + var(--sat)) 24px 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -750,11 +772,23 @@ td {
   justify-content: center;
   gap: 32px;
 }
-.login-card {
+.login-side {
   flex: 1 1 340px;
   max-width: 440px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.login-card {
   padding: 32px;
   gap: 20px;
+}
+.login-server {
+  padding: 16px 20px;
+}
+.short {
+  display: none;
 }
 
 /* ---------- Kunci alat ---------- */
@@ -784,6 +818,18 @@ td {
 }
 
 @media (max-width: 640px) {
+  .long {
+    display: none;
+  }
+  .short {
+    display: inline;
+  }
+  .login-model {
+    display: none;
+  }
+  .login-card {
+    padding: 24px;
+  }
   .page {
     padding: 16px;
     gap: 16px;

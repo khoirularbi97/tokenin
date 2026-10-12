@@ -1,7 +1,7 @@
 import { WebSocketServer } from 'ws';
 import { query } from './db.js';
 import { hub } from './hub.js';
-import { config } from './config.js';
+import { config, originAllowed } from './config.js';
 import { verifyUserToken, deviceKeyMatches } from './auth.js';
 import { updateProgress, completeJob, failJob, failActiveJobOf, activeJobFor } from './jobs.js';
 import { jobJson, photoJson } from './serialize.js';
@@ -84,8 +84,7 @@ export function attachWebSocket(server) {
 }
 
 async function authUser(ws, msg) {
-  const allowed = config.corsOrigins;
-  if (allowed.length && ws.origin && !allowed.includes(ws.origin)) {
+  if (!originAllowed(ws.origin)) {
     return ws.close(4003, 'origin not allowed');
   }
   const user = verifyUserToken(String(msg.token || ''));

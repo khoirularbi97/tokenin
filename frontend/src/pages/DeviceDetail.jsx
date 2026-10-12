@@ -9,6 +9,8 @@ import { useLive, activeJob } from '../lib/live.jsx';
 import { api } from '../lib/api.js';
 import { load, save } from '../lib/storage.js';
 import { dateTime, kwh, jobStatusLabel } from '../lib/format.js';
+import { requestNotifyPermission } from '../lib/notify.js';
+import { isApp, isDesktop } from '../lib/platform.js';
 
 const CHECK_STEPS = ['Mengirim perintah ke alat', 'Menekan kode cek di keypad', 'Memotret layar meteran'];
 
@@ -155,12 +157,13 @@ export default function DeviceDetail() {
   }
 
   async function toggleNotify(checked) {
-    if (checked && 'Notification' in window && Notification.permission !== 'granted') {
-      const result = await Notification.requestPermission();
-      if (result !== 'granted') {
-        setAlertMsg('Izin notifikasi ditolak browser. Aktifkan lewat pengaturan situs.');
-        return;
-      }
+    if (checked && !(await requestNotifyPermission())) {
+      setAlertMsg(
+        isApp
+          ? 'Izin notifikasi ditolak. Aktifkan lewat pengaturan aplikasi di perangkat ini.'
+          : 'Izin notifikasi ditolak browser. Aktifkan lewat pengaturan situs.'
+      );
+      return;
     }
     setNotify(checked);
     save('tokenin-notify', checked ? '1' : '0');
@@ -276,7 +279,13 @@ export default function DeviceDetail() {
               <input type="checkbox" checked={notify} onChange={(e) => toggleNotify(e.target.checked)} />
               <span>Tampilkan notifikasi di perangkat ini</span>
             </label>
-            <div className="muted">Notifikasi muncul selama Tokenin terbuka di browser perangkat ini.</div>
+            <div className="muted">
+              {isDesktop
+                ? 'Notifikasi muncul selama aplikasi berjalan, termasuk saat diperkecil ke tray.'
+                : isApp
+                  ? 'Notifikasi muncul selama aplikasi terbuka. HP bisa memutus koneksi setelah aplikasi lama di latar belakang.'
+                  : 'Notifikasi muncul selama Tokenin terbuka di browser perangkat ini.'}
+            </div>
             {alertMsg && <div className="muted">{alertMsg}</div>}
           </section>
 

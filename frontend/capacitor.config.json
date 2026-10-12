@@ -1,0 +1,24 @@
+{
+  "appId": "id.tokenin.app",
+  "appName": "Tokenin",
+  "webDir": "dist",
+  "backgroundColor": "#070B14",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#070B14"
+  },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover",
+      "style": "DARK"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_tokenin",
+      "iconColor": "#3DE0FF"
+    }
+  }
+}

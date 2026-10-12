@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { API_URL } from '../lib/api.js';
+import { getApiUrl } from '../lib/api.js';
 
 // Menampilkan konfigurasi firmware. Kunci hanya terlihat sekali, saat dibuat atau diganti.
 export default function DeviceKey({ deviceId, deviceKey }) {
   const [copied, setCopied] = useState(false);
-  const host = API_URL.replace(/^https?:\/\//, '');
-  const secure = API_URL.startsWith('https');
+  const url = new URL(getApiUrl());
+  const secure = url.protocol === 'https:';
+  const host = url.hostname;
+  const port = url.port || (secure ? 443 : 80);
   const snippet = [
     `#define TOKENIN_DEVICE_ID  ${deviceId}`,
     `#define TOKENIN_DEVICE_KEY "${deviceKey}"`,
     `#define TOKENIN_HOST       "${host}"`,
-    `#define TOKENIN_PORT       ${secure ? 443 : 80}`,
+    `#define TOKENIN_PORT       ${port}`,
     `#define TOKENIN_SECURE     ${secure ? 'true' : 'false'}`,
   ].join('\n');
 

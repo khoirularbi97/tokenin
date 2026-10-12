@@ -1,8 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
-import { api, getToken, WS_URL } from './api.js';
+import { api, getToken, getWsUrl } from './api.js';
 import { useAuth } from './auth.jsx';
 import { load } from './storage.js';
 import { kwh as fmtKwh } from './format.js';
+import { notify } from './notify.js';
+import { onAppResume } from './native.js';
 
 // Data langsung dari server: meteran, perintah (job), foto terakhir, status koneksi
 const LiveContext = createContext(null);
@@ -85,36 +87,35 @@ export function LiveProvider({ children }) {
     let retry = 0;
     let retryTimer;
     let pingTimer;
+    let pongTimer;
 
     function notifyLow(deviceId, value) {
-      if (load('tokenin-notify') !== '1' || !('Notification' in window)) return;
-      if (Notification.permission !== 'granted') return;
+      if (load('tokenin-notify') !== '1') return;
       const name = stateRef.current.devices[deviceId]?.name || 'Meteran';
-      try {
-        new Notification('Sisa kWh menipis', { body: `${name}: ${fmtKwh(value)}`, tag: `kwh-${deviceId}` });
-      } catch {
-        /* beberapa browser HP hanya mengizinkan notifikasi lewat service worker */
-      }
+      notify('Sisa kWh menipis', `${name}: ${fmtKwh(value)}`, `kwh-${deviceId}`);
     }
 
     function connect() {
       dispatch({ type: 'socket', status: retry === 0 ? 'connecting' : 'reconnecting' });
-      ws = new WebSocket(WS_URL);
-      ws.onopen = () => ws.send(JSON.stringify({ type: 'auth', token: getToken() }));
-      ws.onmessage = (event) => {
+      const socket = new WebSocket(getWsUrl());
+      ws = socket;
+      socket.onopen = () => socket.send(JSON.stringify({ type: 'auth', token: getToken() }));
+      socket.onmessage = (event) => {
         let msg;
         try {
           msg = JSON.parse(event.data);
         } catch {
           return;
         }
-        if (msg.type === 'ready') {
+        if (msg.type === 'pong') {
+          clearTimeout(pongTimer);
+        } else if (msg.type === 'ready') {
           retry = 0;
           dispatch({ type: 'socket', status: 'open' });
           dispatch({ type: 'online', ids: msg.online });
           clearInterval(pingTimer);
           pingTimer = setInterval(() => {
-            if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'ping' }));
+            if (socket.readyState === 1) socket.send(JSON.stringify({ type: 'ping' }));
           }, 25000);
         } else if (msg.type === 'device') {
           if (!stateRef.current.devices[msg.deviceId]) refreshDevices().catch(() => {});
@@ -132,9 +133,10 @@ export function LiveProvider({ children }) {
           if (msg.low) notifyLow(msg.deviceId, msg.kwh);
         }
       };
-      ws.onclose = (event) => {
+      socket.onclose = (event) => {
+        // Abaikan socket lama yang sudah digantikan koneksi baru
+        if (closed || socket !== ws) return;
         clearInterval(pingTimer);
-        if (closed) return;
         if (event.code === 4001) {
           logout();
           return;
@@ -147,9 +149,36 @@ export function LiveProvider({ children }) {
     }
 
     connect();
+
+    // HP sering memutus koneksi saat aplikasi di latar belakang.
+    // Saat dibuka lagi, sambung ulang langsung dan muat ulang data tanpa menunggu jeda retry.
+    const stopResume = onAppResume(() => {
+      if (closed) return;
+      refreshDevices().catch(() => {});
+      if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+        clearTimeout(retryTimer);
+        retry = 0;
+        connect();
+      } else if (ws.readyState === WebSocket.OPEN) {
+        // Koneksi terlihat terbuka tapi bisa saja sudah mati. Cek dengan ping.
+        const suspect = ws;
+        suspect.send(JSON.stringify({ type: 'ping' }));
+        clearTimeout(pongTimer);
+        pongTimer = setTimeout(() => {
+          if (ws !== suspect || closed) return;
+          ws = null;
+          suspect.close();
+          retry = 0;
+          connect();
+        }, 5000);
+      }
+    });
+
     return () => {
       closed = true;
+      stopResume();
       clearTimeout(retryTimer);
+      clearTimeout(pongTimer);
       clearInterval(pingTimer);
       ws?.close();
     };

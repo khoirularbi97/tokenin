@@ -3,7 +3,9 @@ import { Navigate } from 'react-router-dom';
 import Logo from '../components/Logo.jsx';
 import Meter3D from '../components/Meter3D.jsx';
 import { useAuth } from '../lib/auth.jsx';
+import ServerSettings from '../components/ServerSettings.jsx';
 import { useTheme } from '../lib/theme.js';
+import { isApp } from '../lib/platform.js';
 
 export default function Login() {
   const { loggedIn, login } = useAuth();
@@ -39,7 +41,10 @@ export default function Login() {
   return (
     <main className="login-wrap">
       <div className="login-inner">
-        <Meter3D lcd="0000 0000" />
+        <div className="login-model">
+          <Meter3D lcd="0000 0000" />
+        </div>
+        <div className="login-side">
         <form className="panel login-card" onSubmit={onSubmit}>
           <div className="stack" style={{ gap: 6 }}>
             <h1 style={{ fontFamily: 'inherit' }}>
@@ -90,6 +95,12 @@ export default function Login() {
             </button>
           </div>
         </form>
+        {isApp && (
+          <section className="panel login-card login-server">
+            <ServerSettings />
+          </section>
+        )}
+        </div>
       </div>
     </main>
   );

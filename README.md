@@ -1,26 +1,42 @@
 # Tokenin
 
 Sistem isi token listrik jarak jauh: ESP32-CAM menekan keypad meteran dengan 12 solenoid,
-dikendalikan dari dashboard web lewat internet.
+dikendalikan lewat internet dari web, aplikasi desktop, atau aplikasi HP.
 
-| Bagian | Teknologi | Deploy |
+| Bagian | Teknologi | Hasil |
 | --- | --- | --- |
-| `frontend/` | React 18 + Vite | Vercel |
+| `frontend/` | React 18 + Vite | Web di Vercel, sekaligus PWA yang bisa diinstal |
+| `frontend/android/` | Capacitor 8 | Aplikasi Android (`.apk`), Android 7.0 ke atas |
+| `frontend/ios/` | Capacitor 8 | Aplikasi iPhone/iPad, iOS 15 ke atas |
+| `desktop/` | Electron 44 | Windows (`.exe`), macOS (`.dmg`), Linux (`.AppImage`) |
 | `backend/` | Node.js, Express, WebSocket (`ws`) | Render |
 | Database | PostgreSQL | Neon |
 
+Semua platform memakai kode tampilan yang sama di `frontend/src`. Ubah sekali, berlaku di semuanya.
+
 ```
 tokenin/
-├── render.yaml              blueprint Render (opsional)
+├── render.yaml                 blueprint Render (opsional)
+├── .github/workflows/
+│   └── build-apps.yml          build installer desktop + APK otomatis di GitHub
+├── tools/make-icons.py         membuat ulang semua ikon dan splash dari satu desain
 ├── backend/
-│   ├── db/schema.sql        tabel users, devices, jobs, photos (dibuat otomatis saat server start)
+│   ├── db/schema.sql           tabel users, devices, jobs, photos (dibuat otomatis saat server start)
 │   ├── scripts/
-│   │   ├── create-user.js   membuat akun login
+│   │   ├── create-user.js      membuat akun login
 │   │   └── simulate-device.js  alat palsu untuk uji tanpa ESP32-CAM
-│   └── src/                 API REST + server WebSocket
-└── frontend/
-    ├── vercel.json          supaya refresh di /meteran/1 tidak 404
-    └── src/                 halaman login, dashboard, detail, tambah meteran
+│   └── src/                    API REST + server WebSocket
+├── frontend/
+│   ├── capacitor.config.json   pengaturan aplikasi Android/iOS
+│   ├── android/                proyek Android Studio
+│   ├── ios/                    proyek Xcode
+│   ├── public/                 ikon, manifest PWA, service worker
+│   ├── vercel.json             supaya refresh di /meteran/1 tidak 404
+│   └── src/                    halaman login, dashboard, detail, tambah meteran
+└── desktop/
+    ├── main.js                 jendela, tray, keamanan
+    ├── serve.js                menyajikan tampilan lewat app://tokenin
+    └── package.json            konfigurasi installer (electron-builder)
 ```
 
 ## Urutan deploy
@@ -105,6 +121,100 @@ Untuk beberapa domain, pisahkan dengan koma. Simpan, Render akan deploy ulang ot
 
 4. Meteran berubah jadi Online. Coba isi token 20 digit dan Cek sekarang. Angka kWh dari simulator adalah angka acak.
 
+## Aplikasi desktop dan HP
+
+Deploy web dan backend dulu (langkah 1 sampai 6), karena aplikasi butuh alamat backend Render.
+
+### Cara termudah: biarkan GitHub yang mem-build
+
+Tidak perlu memasang Android Studio, Xcode, atau Mac.
+
+1. Di repo GitHub, buka **Settings > Secrets and variables > Actions > tab Variables > New repository variable**.
+   Nama `VITE_API_URL`, isi alamat backend Render, misalnya `https://tokenin-api.onrender.com`.
+2. Buka tab **Actions > Build aplikasi > Run workflow**.
+3. Setelah sekitar 10-15 menit, unduh hasilnya di bagian **Artifacts** paling bawah halaman run:
+   `tokenin-Windows`, `tokenin-macOS`, `tokenin-Linux`, `tokenin-Android`.
+
+Untuk rilis resmi, buat tag lalu push: `git tag v1.0.0 && git push origin v1.0.0`.
+Semua installer otomatis dilampirkan di halaman **Releases**, siap dibagikan lewat satu link.
+
+Workflow ini tidak mem-build iOS, karena aplikasi iOS wajib ditandatangani dengan akun Apple.
+
+### Memasang hasil build
+
+| Platform | File | Cara pasang |
+| --- | --- | --- |
+| Windows | `Tokenin-1.0.0-win-x64.exe` | Jalankan. Kalau muncul "Windows protected your PC", klik **More info > Run anyway** (installer belum bertanda tangan) |
+| macOS | `Tokenin-1.0.0-mac-arm64.dmg` (Apple Silicon) atau `-x64.dmg` (Intel) | Seret ke Applications. Pembukaan pertama: klik kanan aplikasi > **Open**, karena belum dinotarisasi Apple |
+| Linux | `Tokenin-1.0.0-linux-x86_64.AppImage` | `chmod +x` lalu jalankan |
+| Android | `Tokenin-1.0.0-android.apk` | Kirim ke HP, buka, izinkan **Install unknown apps** untuk aplikasi pembukanya |
+
+### Fitur khusus tiap platform
+
+- **Desktop**: menutup jendela menyembunyikan aplikasi ke tray, jadi notifikasi kWh menipis tetap masuk.
+  Keluar sepenuhnya lewat klik kanan ikon tray > **Keluar**. Hanya satu jendela Tokenin yang bisa terbuka.
+- **Android**: tombol back mundur satu halaman, dan di halaman utama mengecilkan aplikasi. Notifikasi
+  memakai notifikasi Android asli. Saat dibuka lagi dari latar belakang, koneksi langsung disambung ulang.
+- **Aplikasi desktop dan HP**: alamat server bisa diganti dari halaman masuk (**Ubah server**) tanpa build ulang.
+  Hanya alamat `https://` yang diterima, kecuali server di laptop sendiri.
+- **Web (PWA)**: di Chrome Android pilih **Tambahkan ke layar utama**, di Safari iPhone pilih
+  **Bagikan > Tambah ke Layar Utama**, di Chrome/Edge desktop klik ikon instal di bilah alamat.
+
+Backend otomatis menerima origin aplikasi (`app://tokenin`, `https://localhost`, `capacitor://localhost`),
+jadi `CORS_ORIGIN` di Render cukup berisi domain Vercel.
+
+### Build sendiri di komputer
+
+**Desktop** (butuh Node.js 22). Installer hanya bisa dibuat untuk sistem operasi komputer yang dipakai:
+
+```bash
+cd desktop
+npm install
+VITE_API_URL=https://tokenin-api.onrender.com npm run dist     # Windows PowerShell: $env:VITE_API_URL="..."; npm run dist
+# hasilnya di desktop/release/
+```
+
+Mode pengembangan dengan tampilan yang langsung berubah saat kode diedit:
+jalankan `npm run dev` di `frontend/`, lalu `npm run dev` di `desktop/`.
+
+**Android** (butuh Android Studio dan JDK 21):
+
+```bash
+cd frontend
+npm install
+VITE_API_URL=https://tokenin-api.onrender.com npm run android   # build, sinkronkan, buka Android Studio
+```
+
+Di Android Studio: **Build > Generate App Bundles or APKs > Generate APKs**, atau tekan Run dengan HP tersambung USB.
+
+**iPhone** (butuh Mac dengan Xcode):
+
+```bash
+cd frontend
+npm install
+VITE_API_URL=https://tokenin-api.onrender.com npm run ios
+```
+
+Di Xcode: pilih target **App > Signing & Capabilities**, pilih Team (Apple ID gratis cukup untuk HP sendiri,
+berlaku 7 hari per pemasangan), sambungkan iPhone, lalu Run. Untuk App Store dibutuhkan Apple Developer Program.
+
+Setiap kali kode di `frontend/src` berubah, jalankan ulang `npm run build && npx cap sync` sebelum build aplikasi HP.
+
+### Mengganti ikon atau ID aplikasi
+
+- Ikon dan splash semua platform dibuat dari `tools/make-icons.py` (butuh `pip install pillow`).
+  Ubah warna atau bentuk di skrip itu, lalu jalankan `python3 tools/make-icons.py` dari folder root.
+- ID aplikasi `id.tokenin.app` (HP) dan `id.tokenin.desktop` (desktop) sebaiknya diganti ke domain sendiri
+  **sebelum** rilis pertama ke Play Store atau App Store, karena tidak bisa diubah setelahnya.
+  Lokasinya: `frontend/capacitor.config.json`, `frontend/android/app/build.gradle`
+  (`namespace` dan `applicationId`), `desktop/package.json` (`build.appId`), dan `desktop/main.js`.
+
+### Untuk Play Store
+
+APK dari workflow memakai kunci debug: bisa dipasang langsung, tapi tidak bisa diunggah ke Play Store.
+Untuk Play Store, buat kunci rilis di Android Studio (**Build > Generate Signed App Bundle**), simpan
+file kuncinya baik-baik, lalu unggah file `.aab`.
+
 ## Menjalankan di laptop
 
 Butuh Node.js 20 atau lebih baru, dan database (Neon atau PostgreSQL lokal).
@@ -162,6 +272,8 @@ Foto: JPEG maksimal 400 KB sebelum base64. Resolusi VGA dengan kualitas 12-15 su
 - **Foto** disimpan di Neon, 20 foto terakhir per meteran.
 - **Angka kWh** belum dibaca otomatis dari foto. Isi manual di halaman detail, atau kirim field `kwh`
   dari alat kalau nanti ada OCR.
-- **Notifikasi kWh menipis** muncul di browser selama dashboard terbuka. Notifikasi saat browser tertutup
-  butuh Web Push atau bot Telegram, belum termasuk paket ini.
+- **Notifikasi kWh menipis** muncul selama Tokenin berjalan: di browser selama tab terbuka, di desktop
+  termasuk saat diperkecil ke tray, di HP selama aplikasi terbuka atau baru saja ke latar belakang.
+  Notifikasi saat aplikasi HP sudah lama ditutup butuh push notification (Firebase/APNs) atau bot Telegram,
+  belum termasuk paket ini.
 - **Login** memakai JWT yang disimpan di browser dan berlaku 7 hari.

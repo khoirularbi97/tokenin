@@ -1,7 +1,7 @@
 import http from 'node:http';
 import express from 'express';
 import cors from 'cors';
-import { config } from './config.js';
+import { config, originAllowed } from './config.js';
 import { migrate } from './db.js';
 import { attachWebSocket } from './socket.js';
 import authRoutes from './routes/auth.js';
@@ -15,8 +15,7 @@ app.use(
   cors({
     origin(origin, cb) {
       // Tanpa header Origin (curl, alat) atau daftar kosong saat pengembangan: izinkan
-      if (!origin || config.corsOrigins.length === 0) return cb(null, true);
-      cb(null, config.corsOrigins.includes(origin.replace(/\/$/, '')));
+      cb(null, originAllowed(origin));
     },
   })
 );

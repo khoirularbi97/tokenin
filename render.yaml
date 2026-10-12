@@ -1,0 +1,20 @@
+# Blueprint Render. Letakkan file ini di root repo kalau mau deploy lewat
+# "New > Blueprint"; kalau deploy manual, isian di README sudah cukup.
+services:
+  - type: web
+    name: tokenin-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

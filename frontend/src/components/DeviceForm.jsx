@@ -5,7 +5,7 @@ const FIELDS = [
   { key: 'meterNumber', label: 'No. meter', placeholder: '11 atau 12 digit di meteran', inputMode: 'numeric' },
   { key: 'meterBrand', label: 'Merek meteran', placeholder: 'Hexing, Itron, dan lainnya' },
   { key: 'powerVa', label: 'Daya (VA)', placeholder: '1300', inputMode: 'numeric' },
-  { key: 'checkCode', label: 'Kode cek sisa kWh', placeholder: 'Lihat buku panduan meteran', inputMode: 'numeric' },
+  { key: 'checkCode', label: 'Kode cek sisa kWh', placeholder: 'Contoh 37#  (# = Enter, * = hapus)', help: 'Tombol yang ditekan alat untuk menampilkan sisa kWh. Lihat buku panduan meteran.' },
 ];
 
 export default function DeviceForm({ initial = {}, submitLabel, onSubmit }) {
@@ -43,6 +43,7 @@ export default function DeviceForm({ initial = {}, submitLabel, onSubmit }) {
             required={f.required}
             onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))}
           />
+          {f.help && <span className="muted">{f.help}</span>}
         </div>
       ))}
       {message && <div className={message.ok ? 'ok-text' : 'error-text'}>{message.text}</div>}

@@ -26,6 +26,9 @@ tokenin/
 │   │   ├── create-user.js      membuat akun login
 │   │   └── simulate-device.js  alat palsu untuk uji tanpa ESP32-CAM
 │   └── src/                    API REST + server WebSocket
+├── firmware/
+│   ├── docs/wiring.html        skema rangkaian ESP32-CAM, MCP23017, dan 12 solenoid
+│   └── tokenin_esp32cam/       program ESP32-CAM (Arduino IDE), panduan di firmware/README.md
 ├── frontend/
 │   ├── capacitor.config.json   pengaturan aplikasi Android/iOS
 │   ├── android/                proyek Android Studio
@@ -235,6 +238,9 @@ Pastikan `CORS_ORIGIN` di `backend/.env` memuat `http://localhost:5173`.
 
 ## Protokol alat (untuk firmware ESP32-CAM)
 
+Firmware lengkapnya ada di `firmware/tokenin_esp32cam`, dengan panduan di `firmware/README.md`.
+Di kode cek, `#` berarti tombol Enter dan `*` tombol hapus, contoh `37#`.
+
 Alat menyambung ke `wss://NAMA-SERVICE.onrender.com/ws` (port 443) dan bertukar pesan JSON teks.
 
 **Alat ke server**
@@ -252,10 +258,11 @@ Alat menyambung ke `wss://NAMA-SERVICE.onrender.com/ws` (port 443) dan bertukar 
 
 | Pesan | Arti |
 | --- | --- |
-| `{"type":"welcome","deviceId":1,"checkCode":"37"}` | Login alat berhasil |
-| `{"type":"topup","jobId":5,"token":"12345678901234567890","checkCode":"37"}` | Isi token. Kalau `checkCode` tidak kosong, cek sisa dan foto dulu (`before`), lalu tekan 20 digit + Enter, lalu foto `after` |
-| `{"type":"check","jobId":6,"checkCode":"37"}` | Tekan kode cek, foto layar (`check`), lalu kirim `result` |
-| `{"type":"config","checkCode":"37"}` | Kode cek diubah dari dashboard |
+| `{"type":"welcome","deviceId":1,"checkCode":"37#"}` | Login alat berhasil |
+| `{"type":"topup","jobId":5,"token":"12345678901234567890","checkCode":"37#"}` | Isi token. Kalau `checkCode` tidak kosong, cek sisa dan foto dulu (`before`), lalu tekan 20 digit + Enter, lalu foto `after` |
+| `{"type":"check","jobId":6,"checkCode":"37#"}` | Tekan kode cek, foto layar (`check`), lalu kirim `result` |
+| `{"type":"config","checkCode":"37#"}` | Kode cek diubah dari dashboard |
+| `{"type":"error","code":"auth","error":"..."}` | ID atau kunci alat salah, dikirim tepat sebelum koneksi ditutup |
 
 Server menutup koneksi dengan kode `4001` kalau ID atau kunci salah. Perintah yang tidak dilaporkan selesai
 dalam 2 menit, atau alat terputus di tengah jalan, otomatis ditandai gagal.

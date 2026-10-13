@@ -100,10 +100,15 @@ async function authUser(ws, msg) {
 
 async function authDevice(ws, msg) {
   const deviceId = Number(msg.deviceId);
-  if (!Number.isInteger(deviceId)) return ws.close(4001, 'invalid device');
+  if (!Number.isInteger(deviceId)) {
+    send(ws, { type: 'error', error: 'ID alat tidak valid.' });
+    return ws.close(4001, 'invalid device');
+  }
   const { rows } = await query('SELECT * FROM devices WHERE id = $1', [deviceId]);
   const device = rows[0];
   if (!device || !deviceKeyMatches(String(msg.key || ''), device.device_key_hash)) {
+    // Pesan ini dibaca firmware: alat berhenti mencoba terlalu sering dan menampilkan petunjuk
+    send(ws, { type: 'error', code: 'auth', error: 'ID atau kunci alat salah.' });
     return ws.close(4001, 'invalid device key');
   }
 

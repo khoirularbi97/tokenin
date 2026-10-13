@@ -1,0 +1,562 @@
+<title>Wiring Tokenin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: satu kolom lembar kerja teknik; skema di atas kertas berpetak, tabel pin di bawah tiap skema. */
+:root {
+  --bg: #EEF1F6;
+  --paper: #FFFFFF;
+  --ink: #142033;
+  --muted: #55617A;
+  --line: #C9D1DE;
+  --grid: #E6EBF2;
+  --accent: #0B7C99;
+  /* Warna jalur listrik (net) */
+  --n12: #C2410C;
+  --n5: #B45309;
+  --n33: #7C3AED;
+  --ngnd: #475569;
+  --nsda: #1D4ED8;
+  --nscl: #047857;
+  --nrst: #BE185D;
+  --warn-bg: #FFF4E5;
+  --warn-ink: #7A3A00;
+  --font-display: 'Chakra Petch', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0B111C; --paper: #111A29; --ink: #E6ECF5; --muted: #9AA6BC; --line: #2A3850; --grid: #18233A;
+    --accent: #3DD6F5; --n12: #FB923C; --n5: #FBBF24; --n33: #A78BFA; --ngnd: #94A3B8; --nsda: #60A5FA;
+    --nscl: #34D399; --nrst: #F472B6; --warn-bg: #2A1E0C; --warn-ink: #FCD9A8;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0B111C; --paper: #111A29; --ink: #E6ECF5; --muted: #9AA6BC; --line: #2A3850; --grid: #18233A;
+  --accent: #3DD6F5; --n12: #FB923C; --n5: #FBBF24; --n33: #A78BFA; --ngnd: #94A3B8; --nsda: #60A5FA;
+  --nscl: #34D399; --nrst: #F472B6; --warn-bg: #2A1E0C; --warn-ink: #FCD9A8;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+h1, h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+  margin: 0;
+}
+h1 { font-size: clamp(32px, 5vw, 44px); letter-spacing: 0.5px; }
+h2 { font-size: 24px; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--font-mono); font-size: 0.92em; }
+
+header { display: flex; flex-direction: column; gap: 14px; }
+.kicker { font-family: var(--font-mono); font-size: 14px; color: var(--accent); }
+.lead { font-size: 18px; color: var(--muted); }
+.spec {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 6px 0 0;
+  padding: 0;
+}
+.spec div { display: flex; flex-direction: column; }
+.spec dt { font-size: 13px; color: var(--muted); }
+.spec dd { margin: 0; font-family: var(--font-mono); font-size: 16px; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+section { display: flex; flex-direction: column; gap: 18px; }
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.legend i { display: inline-block; width: 26px; height: 0; border-top: 3px solid currentColor; }
+
+figure {
+  margin: 0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+}
+figure svg { display: block; width: 100%; height: auto; }
+figure.wide svg { min-width: 760px; }
+figure.mid svg { min-width: 620px; }
+figcaption { padding: 10px 16px 14px; font-size: 14px; color: var(--muted); }
+
+/* Elemen skema */
+.box { fill: var(--paper); stroke: var(--ink); stroke-width: 1.6; }
+.chip { fill: var(--paper); stroke: var(--ink); stroke-width: 2; }
+.pad { fill: var(--ink); }
+.part { fill: var(--paper); stroke: var(--ink); stroke-width: 1.6; }
+.sym { fill: none; stroke: var(--ink); stroke-width: 1.8; }
+.symfill { fill: var(--ink); }
+.w { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.bus { fill: none; stroke-width: 4; stroke-linecap: round; }
+.dot { stroke: none; }
+.w12 { stroke: var(--n12); } .f12 { fill: var(--n12); }
+.w5 { stroke: var(--n5); } .f5 { fill: var(--n5); }
+.w33 { stroke: var(--n33); } .f33 { fill: var(--n33); }
+.wg { stroke: var(--ngnd); } .fg { fill: var(--ngnd); }
+.wsda { stroke: var(--nsda); } .fsda { fill: var(--nsda); }
+.wscl { stroke: var(--nscl); } .fscl { fill: var(--nscl); }
+.wrst { stroke: var(--nrst); } .frst { fill: var(--nrst); }
+.wsig { stroke: var(--accent); } .fsig { fill: var(--accent); }
+.t { fill: var(--ink); font-family: var(--font-body); font-size: 14px; }
+.tb { fill: var(--ink); font-family: var(--font-display); font-size: 17px; font-weight: 600; }
+.ts { fill: var(--muted); font-family: var(--font-body); font-size: 12.5px; }
+.tm { fill: var(--ink); font-family: var(--font-mono); font-size: 12.5px; }
+.tmm { fill: var(--muted); font-family: var(--font-mono); font-size: 11.5px; }
+.tn { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; }
+
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); }
+table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 560px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; font-size: 14px; color: var(--muted); background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+td.mono, td .mono { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.net { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.net::before { content: ''; width: 14px; height: 0; border-top: 3px solid currentColor; }
+.c12 { color: var(--n12); } .c5 { color: var(--n5); } .c33 { color: var(--n33); } .cg { color: var(--ngnd); }
+.csda { color: var(--nsda); } .cscl { color: var(--nscl); } .crst { color: var(--nrst); } .csig { color: var(--accent); }
+
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.cols > * { min-width: 0; }
+ol.steps, ul.notes { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 10px; max-width: 72ch; }
+ol.steps li::marker { font-family: var(--font-mono); color: var(--accent); }
+.warn {
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  border: 1px solid color-mix(in srgb, var(--warn-ink) 30%, transparent);
+  border-radius: 6px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 72ch;
+}
+.warn strong { font-weight: 600; }
+footer { font-size: 14px; color: var(--muted); }
+</style>
+
+<main class="wrap">
+  <header>
+    <span class="kicker">TOKENIN / perangkat keras / rev 1.0</span>
+    <h1>Wiring Tokenin</h1>
+    <p class="lead">Rangkaian robot penekan keypad meteran prabayar: ESP32-CAM sebagai otak dan kamera, MCP23017 sebagai penambah pin, dan 12 solenoid yang masing-masing digerakkan satu MOSFET.</p>
+    <dl class="spec">
+      <div><dt>Sumber daya</dt><dd>12 V, 2 A</dd></div>
+      <div><dt>Logika</dt><dd>3,3 V</dd></div>
+      <div><dt>Bus I2C</dt><dd>SDA IO14, SCL IO13</dd></div>
+      <div><dt>Alamat MCP23017</dt><dd>0x20</dd></div>
+      <div><dt>Solenoid aktif</dt><dd>1 dari 12</dd></div>
+    </dl>
+  </header>
+
+  <section aria-labelledby="s-overview">
+    <h2 id="s-overview">Gambaran rangkaian</h2>
+    <p>Satu adaptor 12 V menghidupi semuanya. Jalur 12 V langsung ke solenoid, lalu modul step-down menurunkannya ke 5 V untuk ESP32-CAM. MCP23017 mengambil 3,3 V dari ESP32-CAM. Semua GND disatukan.</p>
+    <div class="legend" aria-label="Arti warna kabel">
+      <span class="c12"><i></i>+12 V</span>
+      <span class="c5"><i></i>5 V</span>
+      <span class="c33"><i></i>3,3 V</span>
+      <span class="cg"><i></i>GND</span>
+      <span class="csda"><i></i>SDA</span>
+      <span class="cscl"><i></i>SCL</span>
+      <span class="crst"><i></i>RESET</span>
+      <span class="csig"><i></i>Sinyal solenoid</span>
+    </div>
+    <figure class="wide">
+      <svg viewBox="0 0 960 490" role="img" aria-label="Diagram blok: adaptor 12 volt lewat sekring ke jalur 12 volt, ke step-down LM2596 menjadi 5 volt untuk ESP32-CAM, ESP32-CAM tersambung I2C ke MCP23017, MCP23017 menggerakkan 12 jalur solenoid yang juga mendapat 12 volt. Semua GND tersambung.">
+        <!-- Jalur 12 V -->
+        <path class="w w12" d="M170 72 H210"/>
+        <path class="bus w12" d="M294 72 H938"/>
+        <text class="tn f12" x="610" y="60">+12 V</text>
+        <!-- Adaptor dan sekring -->
+        <rect class="box" x="20" y="40" width="150" height="64" rx="8"/>
+        <text class="tb" x="95" y="68" text-anchor="middle">Adaptor</text>
+        <text class="ts" x="95" y="89" text-anchor="middle">12 V, 2 A</text>
+        <rect class="box" x="210" y="56" width="84" height="32" rx="4"/>
+        <text class="t" x="252" y="77" text-anchor="middle">Sekring 2 A</text>
+        <!-- C1 -->
+        <path class="w w12" d="M320 72 V196"/>
+        <path class="sym" d="M306 196 H334 M306 206 H334"/>
+        <path class="w wg" d="M320 206 V450"/>
+        <circle class="dot f12" cx="320" cy="72" r="4.5"/>
+        <text class="t" x="304" y="196" text-anchor="end">C1</text>
+        <text class="ts" x="304" y="214" text-anchor="end">1000 µF 25 V</text>
+        <!-- LM2596 -->
+        <path class="w w12" d="M430 72 V170"/>
+        <circle class="dot f12" cx="430" cy="72" r="4.5"/>
+        <rect class="box" x="400" y="170" width="150" height="70" rx="8"/>
+        <text class="tb" x="475" y="199" text-anchor="middle">LM2596</text>
+        <text class="ts" x="475" y="220" text-anchor="middle">12 V ke 5,0 V</text>
+        <path class="w wg" d="M475 240 V450"/>
+        <!-- 5 V dan C2 -->
+        <path class="w w5" d="M550 225 H600"/>
+        <text class="tn f5" x="575" y="216" text-anchor="middle">5 V</text>
+        <path class="w w5" d="M575 225 V272"/>
+        <circle class="dot f5" cx="575" cy="225" r="4.5"/>
+        <path class="sym" d="M561 272 H589 M561 282 H589"/>
+        <path class="w wg" d="M575 282 V450"/>
+        <text class="t" x="555" y="276" text-anchor="end">C2</text>
+        <text class="ts" x="555" y="294" text-anchor="end">470 µF 10 V</text>
+        <!-- ESP32-CAM -->
+        <rect class="box" x="600" y="150" width="150" height="160" rx="8"/>
+        <text class="tb" x="614" y="176">ESP32-CAM</text>
+        <text class="ts" x="614" y="195">AI Thinker</text>
+        <text class="tmm" x="740" y="224" text-anchor="end">3V3</text>
+        <text class="tmm" x="740" y="249" text-anchor="end">IO14</text>
+        <text class="tmm" x="740" y="274" text-anchor="end">IO13</text>
+        <text class="tmm" x="740" y="299" text-anchor="end">IO15</text>
+        <text class="tmm" x="610" y="229">5V</text>
+        <path class="w wg" d="M675 310 V450"/>
+        <!-- Sambungan ESP ke MCP -->
+        <path class="w w33" d="M750 220 H785"/>
+        <path class="w wsda" d="M750 245 H785"/>
+        <path class="w wscl" d="M750 270 H785"/>
+        <path class="w wrst" d="M750 295 H785"/>
+        <!-- MCP23017 -->
+        <rect class="box" x="785" y="150" width="130" height="160" rx="8"/>
+        <text class="tmm" x="795" y="224">VDD</text>
+        <text class="tmm" x="795" y="249">SDA</text>
+        <text class="tmm" x="795" y="274">SCK</text>
+        <text class="tmm" x="795" y="299">RESET</text>
+        <text class="tb" x="799" y="176">MCP23017</text>
+        <path class="w wg" d="M860 310 V330 H890"/>
+        <path class="w wg" d="M890 330 V450"/>
+        <!-- 12 sinyal ke driver -->
+        <path class="bus wsig" d="M830 310 V350"/>
+        <text class="tn fsig" x="822" y="336" text-anchor="end">12 sinyal</text>
+        <!-- 12 V ke driver -->
+        <path class="w w12" d="M938 72 V350"/>
+        <circle class="dot f12" cx="938" cy="72" r="4.5"/>
+        <!-- Driver -->
+        <rect class="box" x="590" y="350" width="360" height="62" rx="8"/>
+        <text class="tb" x="606" y="377">12 jalur driver</text>
+        <text class="ts" x="606" y="398">MOSFET, dioda, solenoid (lihat skema satu jalur)</text>
+        <path class="w wg" d="M700 412 V450"/>
+        <!-- GND bersama -->
+        <path class="w wg" d="M95 104 V450"/>
+        <path class="bus wg" d="M95 450 H900"/>
+        <circle class="dot fg" cx="320" cy="450" r="4.5"/>
+        <circle class="dot fg" cx="475" cy="450" r="4.5"/>
+        <circle class="dot fg" cx="575" cy="450" r="4.5"/>
+        <circle class="dot fg" cx="675" cy="450" r="4.5"/>
+        <circle class="dot fg" cx="700" cy="450" r="4.5"/>
+        <circle class="dot fg" cx="890" cy="450" r="4.5"/>
+        <text class="tn fg" x="110" y="474">GND bersama</text>
+      </svg>
+      <figcaption>Hanya satu solenoid yang menyala dalam satu waktu, jadi adaptor 2 A sudah cukup. Sekring melindungi kabel kalau ada jalur yang terhubung singkat.</figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="s-mcp">
+    <h2 id="s-mcp">ESP32-CAM ke MCP23017</h2>
+    <p>Nama pin mengikuti tulisan di board ESP32-CAM dan nomor kaki IC MCP23017 versi DIP-28. Kalau memakai modul MCP23017, sambungkan berdasarkan label pin yang tercetak di modulnya.</p>
+    <figure class="wide">
+      <svg viewBox="0 0 960 560" role="img" aria-label="Skema pin: IO14 ESP32-CAM ke SDA kaki 13 MCP23017, IO13 ke SCK kaki 12, IO15 ke RESET kaki 18, 3V3 ke VDD kaki 9, GND ke VSS kaki 10, A0 sampai A2 ke GND, pull-up 4,7 kilo-ohm di SDA dan SCL. GPA0 sampai GPA7 dan GPB0 sampai GPB3 ke jalur solenoid 1 sampai 12.">
+        <!-- ESP32-CAM -->
+        <rect class="chip" x="80" y="50" width="220" height="400" rx="6"/>
+        <text class="tb" x="190" y="244" text-anchor="middle">ESP32-CAM</text>
+        <text class="ts" x="190" y="264" text-anchor="middle">tampak atas</text>
+        <!-- pin kiri -->
+        <g>
+          <rect class="pad" x="76" y="96" width="8" height="8"/><text class="tm" x="92" y="104">3V3</text>
+          <rect class="pad" x="76" y="140" width="8" height="8"/><text class="tmm" x="92" y="148">IO16</text>
+          <rect class="pad" x="76" y="184" width="8" height="8"/><text class="tmm" x="92" y="192">IO0</text>
+          <rect class="pad" x="76" y="228" width="8" height="8"/><text class="tm" x="92" y="236">GND</text>
+          <rect class="pad" x="76" y="272" width="8" height="8"/><text class="tmm" x="92" y="280">VCC</text>
+          <rect class="pad" x="76" y="316" width="8" height="8"/><text class="tmm" x="92" y="324">U0R</text>
+          <rect class="pad" x="76" y="360" width="8" height="8"/><text class="tmm" x="92" y="368">U0T</text>
+          <rect class="pad" x="76" y="404" width="8" height="8"/><text class="tm" x="92" y="412">GND</text>
+        </g>
+        <!-- pin kanan -->
+        <g>
+          <rect class="pad" x="296" y="96" width="8" height="8"/><text class="tm" x="288" y="104" text-anchor="end">5V</text>
+          <rect class="pad" x="296" y="140" width="8" height="8"/><text class="tm" x="288" y="148" text-anchor="end">GND</text>
+          <rect class="pad" x="296" y="184" width="8" height="8"/><text class="tmm" x="288" y="192" text-anchor="end">IO12</text>
+          <rect class="pad" x="296" y="228" width="8" height="8"/><text class="tm" x="288" y="236" text-anchor="end">IO13</text>
+          <rect class="pad" x="296" y="272" width="8" height="8"/><text class="tm" x="288" y="280" text-anchor="end">IO15</text>
+          <rect class="pad" x="296" y="316" width="8" height="8"/><text class="tm" x="288" y="324" text-anchor="end">IO14</text>
+          <rect class="pad" x="296" y="360" width="8" height="8"/><text class="tmm" x="288" y="368" text-anchor="end">IO2</text>
+          <rect class="pad" x="296" y="404" width="8" height="8"/><text class="tmm" x="288" y="412" text-anchor="end">IO4</text>
+        </g>
+        <!-- Sambungan ESP -->
+        <path class="w w33" d="M76 100 H48"/>
+        <text class="tn f33" x="42" y="104" text-anchor="end">3V3</text>
+        <path class="w wg" d="M76 232 H56 V244"/>
+        <path class="sym wg" d="M46 244 H66 M50 249 H62 M54 254 H58"/>
+        <path class="w wg" d="M76 408 H56 V420"/>
+        <path class="sym wg" d="M46 420 H66 M50 425 H62 M54 430 H58"/>
+        <path class="w w5" d="M304 100 H340"/>
+        <text class="tn f5" x="346" y="104">5 V (LM2596)</text>
+        <path class="w wg" d="M304 144 H330 V156"/>
+        <path class="sym wg" d="M320 156 H340 M324 161 H336 M328 166 H332"/>
+        <path class="w wrst" d="M304 276 H340"/>
+        <text class="tn frst" x="346" y="280">RESET</text>
+        <!-- SCK dan SDA -->
+        <path class="w wscl" d="M304 232 H440 V420 H556"/>
+        <path class="w wsda" d="M304 320 H410 V450 H556"/>
+        <!-- pull-up SCK -->
+        <circle class="dot fscl" cx="470" cy="420" r="4"/>
+        <path class="w wscl" d="M470 420 V402"/>
+        <rect class="part" x="464" y="372" width="12" height="30" rx="2"/>
+        <path class="w w33" d="M470 372 V356"/>
+        <text class="tn f33" x="470" y="350" text-anchor="middle">3V3</text>
+        <text class="tmm" x="482" y="392">4,7k</text>
+        <!-- pull-up SDA -->
+        <circle class="dot fsda" cx="500" cy="450" r="4"/>
+        <path class="w wsda" d="M500 450 V468"/>
+        <rect class="part" x="494" y="468" width="12" height="30" rx="2"/>
+        <path class="w w33" d="M500 498 V514"/>
+        <text class="tn f33" x="500" y="530" text-anchor="middle">3V3</text>
+        <text class="tmm" x="512" y="488">4,7k</text>
+
+        <!-- MCP23017 -->
+        <text class="tb" x="660" y="52" text-anchor="middle">MCP23017</text>
+        <rect class="chip" x="560" y="64" width="200" height="440" rx="6"/>
+        <path class="sym" d="M648 64 a12 12 0 0 0 24 0"/>
+        <!-- kiri: kaki 1-14 -->
+        <g>
+          <rect class="pad" x="556" y="86" width="8" height="8"/><text class="tm" x="570" y="94">1 GPB0</text>
+          <rect class="pad" x="556" y="116" width="8" height="8"/><text class="tm" x="570" y="124">2 GPB1</text>
+          <rect class="pad" x="556" y="146" width="8" height="8"/><text class="tm" x="570" y="154">3 GPB2</text>
+          <rect class="pad" x="556" y="176" width="8" height="8"/><text class="tm" x="570" y="184">4 GPB3</text>
+          <rect class="pad" x="556" y="206" width="8" height="8"/><text class="tmm" x="570" y="214">5 GPB4</text>
+          <rect class="pad" x="556" y="236" width="8" height="8"/><text class="tmm" x="570" y="244">6 GPB5</text>
+          <rect class="pad" x="556" y="266" width="8" height="8"/><text class="tmm" x="570" y="274">7 GPB6</text>
+          <rect class="pad" x="556" y="296" width="8" height="8"/><text class="tmm" x="570" y="304">8 GPB7</text>
+          <rect class="pad" x="556" y="326" width="8" height="8"/><text class="tm" x="570" y="334">9 VDD</text>
+          <rect class="pad" x="556" y="356" width="8" height="8"/><text class="tm" x="570" y="364">10 VSS</text>
+          <rect class="pad" x="556" y="386" width="8" height="8"/><text class="tmm" x="570" y="394">11 NC</text>
+          <rect class="pad" x="556" y="416" width="8" height="8"/><text class="tm" x="570" y="424">12 SCK</text>
+          <rect class="pad" x="556" y="446" width="8" height="8"/><text class="tm" x="570" y="454">13 SDA</text>
+          <rect class="pad" x="556" y="476" width="8" height="8"/><text class="tmm" x="570" y="484">14 NC</text>
+        </g>
+        <!-- kanan: kaki 28-15 -->
+        <g>
+          <rect class="pad" x="756" y="86" width="8" height="8"/><text class="tm" x="750" y="94" text-anchor="end">GPA7 28</text>
+          <rect class="pad" x="756" y="116" width="8" height="8"/><text class="tm" x="750" y="124" text-anchor="end">GPA6 27</text>
+          <rect class="pad" x="756" y="146" width="8" height="8"/><text class="tm" x="750" y="154" text-anchor="end">GPA5 26</text>
+          <rect class="pad" x="756" y="176" width="8" height="8"/><text class="tm" x="750" y="184" text-anchor="end">GPA4 25</text>
+          <rect class="pad" x="756" y="206" width="8" height="8"/><text class="tm" x="750" y="214" text-anchor="end">GPA3 24</text>
+          <rect class="pad" x="756" y="236" width="8" height="8"/><text class="tm" x="750" y="244" text-anchor="end">GPA2 23</text>
+          <rect class="pad" x="756" y="266" width="8" height="8"/><text class="tm" x="750" y="274" text-anchor="end">GPA1 22</text>
+          <rect class="pad" x="756" y="296" width="8" height="8"/><text class="tm" x="750" y="304" text-anchor="end">GPA0 21</text>
+          <rect class="pad" x="756" y="326" width="8" height="8"/><text class="tmm" x="750" y="334" text-anchor="end">INTA 20</text>
+          <rect class="pad" x="756" y="356" width="8" height="8"/><text class="tmm" x="750" y="364" text-anchor="end">INTB 19</text>
+          <rect class="pad" x="756" y="386" width="8" height="8"/><text class="tm" x="750" y="394" text-anchor="end">RESET 18</text>
+          <rect class="pad" x="756" y="416" width="8" height="8"/><text class="tm" x="750" y="424" text-anchor="end">A2 17</text>
+          <rect class="pad" x="756" y="446" width="8" height="8"/><text class="tm" x="750" y="454" text-anchor="end">A1 16</text>
+          <rect class="pad" x="756" y="476" width="8" height="8"/><text class="tm" x="750" y="484" text-anchor="end">A0 15</text>
+        </g>
+        <!-- VDD, VSS -->
+        <path class="w w33" d="M556 330 H526"/>
+        <text class="tn f33" x="520" y="334" text-anchor="end">3V3</text>
+        <path class="w wg" d="M556 360 H534 V372"/>
+        <path class="sym wg" d="M524 372 H544 M528 377 H540 M532 382 H536"/>
+        <!-- GPB0-3 ke jalur 9-12 -->
+        <path class="w wsig" d="M556 90 H526"/><text class="tn fsig" x="520" y="94" text-anchor="end">jalur 9</text>
+        <path class="w wsig" d="M556 120 H526"/><text class="tn fsig" x="520" y="124" text-anchor="end">jalur 10</text>
+        <path class="w wsig" d="M556 150 H526"/><text class="tn fsig" x="520" y="154" text-anchor="end">jalur 11</text>
+        <path class="w wsig" d="M556 180 H526"/><text class="tn fsig" x="520" y="184" text-anchor="end">jalur 12</text>
+        <!-- GPA ke jalur 1-8 -->
+        <path class="w wsig" d="M764 90 H796"/><text class="tn fsig" x="802" y="94">jalur 8</text>
+        <path class="w wsig" d="M764 120 H796"/><text class="tn fsig" x="802" y="124">jalur 7</text>
+        <path class="w wsig" d="M764 150 H796"/><text class="tn fsig" x="802" y="154">jalur 6</text>
+        <path class="w wsig" d="M764 180 H796"/><text class="tn fsig" x="802" y="184">jalur 5</text>
+        <path class="w wsig" d="M764 210 H796"/><text class="tn fsig" x="802" y="214">jalur 4</text>
+        <path class="w wsig" d="M764 240 H796"/><text class="tn fsig" x="802" y="244">jalur 3</text>
+        <path class="w wsig" d="M764 270 H796"/><text class="tn fsig" x="802" y="274">jalur 2</text>
+        <path class="w wsig" d="M764 300 H796"/><text class="tn fsig" x="802" y="304">jalur 1</text>
+        <!-- RESET dan alamat -->
+        <path class="w wrst" d="M764 390 H796"/>
+        <text class="tn frst" x="802" y="394">RESET</text>
+        <path class="w wg" d="M764 420 H790 V496"/>
+        <path class="w wg" d="M764 450 H790"/>
+        <path class="w wg" d="M764 480 H790"/>
+        <circle class="dot fg" cx="790" cy="450" r="4"/>
+        <circle class="dot fg" cx="790" cy="480" r="4"/>
+        <path class="sym wg" d="M780 496 H800 M784 501 H796 M788 506 H792"/>
+        <text class="ts" x="806" y="454">alamat 0x20</text>
+      </svg>
+      <figcaption>Label berwarna yang sama (3V3, RESET) berarti satu jalur yang tersambung. GPB4 sampai GPB7, INTA, dan INTB dibiarkan tidak tersambung.</figcaption>
+    </figure>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th scope="col">Pin ESP32-CAM</th><th scope="col">Ke</th><th scope="col">Keterangan</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono"><span class="net c5">5V</span></td><td>OUT+ LM2596</td><td>Setel LM2596 ke 5,0 V dulu sebelum disambung</td></tr>
+          <tr><td class="mono"><span class="net cg">GND</span></td><td>GND bersama</td><td>Semua GND: adaptor, LM2596, MCP23017, source MOSFET</td></tr>
+          <tr><td class="mono"><span class="net c33">3V3</span></td><td>MCP23017 VDD (kaki 9), pull-up SDA dan SCL</td><td>Tambahkan kapasitor 100 nF di antara VDD dan VSS, sedekat mungkin dengan IC</td></tr>
+          <tr><td class="mono"><span class="net csda">IO14</span></td><td>MCP23017 SDA (kaki 13)</td><td>Pull-up 4,7 kΩ ke 3V3, lewati kalau modul sudah punya</td></tr>
+          <tr><td class="mono"><span class="net cscl">IO13</span></td><td>MCP23017 SCK (kaki 12)</td><td>Pull-up 4,7 kΩ ke 3V3, lewati kalau modul sudah punya</td></tr>
+          <tr><td class="mono"><span class="net crst">IO15</span></td><td>MCP23017 RESET (kaki 18)</td><td>Pengaman: firmware me-reset MCP23017 kalau I2C macet, sehingga semua solenoid mati</td></tr>
+          <tr><td class="mono">U0R, U0T</td><td>ESP32-CAM-MB</td><td>Hanya untuk upload pertama. Update berikutnya lewat WiFi (OTA)</td></tr>
+          <tr><td class="mono">IO4, IO33</td><td>Bawaan board</td><td>LED flash dan LED status merah, tidak perlu disambung</td></tr>
+          <tr><td class="mono">IO0, IO2, IO12, IO16, VCC</td><td>Jangan dipakai</td><td>IO0 dipakai kamera, IO2 dan IO12 menentukan mode boot, IO16 dipakai PSRAM</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="s-ch">
+    <h2 id="s-ch">Satu jalur solenoid</h2>
+    <p>Rangkaian ini dibuat 12 kali, satu untuk tiap tombol. Output MCP23017 hanya memberi sinyal; arus solenoid mengalir lewat MOSFET langsung dari jalur 12 V.</p>
+    <figure class="mid">
+      <svg viewBox="0 0 760 300" role="img" aria-label="Skema satu jalur: output MCP23017 lewat resistor 220 ohm ke gate MOSFET, resistor 10 kilo-ohm dari gate ke GND, source ke GND, drain ke kaki bawah solenoid, kaki atas solenoid ke +12 volt, dioda paralel dengan solenoid dengan garis katoda ke +12 volt.">
+        <!-- sumber sinyal -->
+        <rect class="box" x="20" y="150" width="130" height="40" rx="6"/>
+        <text class="tm" x="85" y="175" text-anchor="middle">MCP23017 GPAx</text>
+        <path class="w wsig" d="M150 170 H200"/>
+        <!-- R1 -->
+        <rect class="part" x="200" y="163" width="52" height="14" rx="2"/>
+        <text class="t" x="226" y="152" text-anchor="middle">R1 220 Ω</text>
+        <path class="w wsig" d="M252 170 H380"/>
+        <circle class="dot fsig" cx="320" cy="170" r="4"/>
+        <!-- R2 -->
+        <path class="w wsig" d="M320 170 V196"/>
+        <rect class="part" x="313" y="196" width="14" height="44" rx="2"/>
+        <path class="w wg" d="M320 240 V262"/>
+        <path class="sym wg" d="M308 262 H332 M313 268 H327 M318 274 H322"/>
+        <text class="t" x="336" y="216">R2</text>
+        <text class="ts" x="336" y="234">10 kΩ</text>
+        <!-- MOSFET -->
+        <path class="sym" d="M380 148 V192"/>
+        <path class="sym" d="M390 140 V154 M390 162 V178 M390 186 V200"/>
+        <path class="sym" d="M390 147 H430 M390 170 H430 M390 193 H430"/>
+        <path class="symfill" d="M392 170 l10 -5 v10 z"/>
+        <path class="w" style="stroke: var(--ink)" d="M430 170 V193"/>
+        <text class="t" x="446" y="166">Q</text>
+        <text class="ts" x="446" y="184">IRLZ44N atau AO3400</text>
+        <!-- source ke GND -->
+        <path class="w wg" d="M430 193 V262"/>
+        <path class="sym wg" d="M418 262 H442 M423 268 H437 M428 274 H432"/>
+        <!-- drain ke solenoid -->
+        <path class="w wsig" d="M430 147 V118"/>
+        <circle class="dot fsig" cx="430" cy="118" r="4"/>
+        <!-- solenoid -->
+        <path class="w wsig" d="M430 118 V104"/>
+        <path class="sym" d="M430 104 a8 8 0 0 1 0 -16 a8 8 0 0 1 0 -16 a8 8 0 0 1 0 -16 a8 8 0 0 1 0 -16"/>
+        <path class="sym" d="M412 92 V52"/>
+        <path class="w w12" d="M430 40 V22"/>
+        <text class="tn f12" x="430" y="16" text-anchor="middle">+12 V</text>
+        <text class="t" x="356" y="70" text-anchor="end">Solenoid</text>
+        <text class="ts" x="356" y="88" text-anchor="end">12 V</text>
+        <!-- dioda -->
+        <path class="w w12" d="M430 40 H530 V58"/>
+        <circle class="dot f12" cx="430" cy="40" r="4"/>
+        <path class="sym" d="M518 60 H542"/>
+        <path class="symfill" d="M530 60 l-12 24 h24 z"/>
+        <path class="w wsig" d="M530 84 V118 H430"/>
+        <text class="t" x="552" y="68">D 1N5819</text>
+        <text class="ts" x="552" y="86">garis katoda ke +12 V</text>
+      </svg>
+      <figcaption>Tanpa dioda, lonjakan tegangan saat solenoid dilepas bisa merusak MOSFET. R2 menahan gate di 0 V selama ESP32-CAM menyala, supaya tidak ada tombol yang tertekan sendiri.</figcaption>
+    </figure>
+
+    <div class="cols">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Jalur</th><th scope="col">Output MCP23017</th><th scope="col">Tombol meteran</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="mono">GPA0, kaki 21</td><td class="mono">1</td></tr>
+            <tr><td class="mono">2</td><td class="mono">GPA1, kaki 22</td><td class="mono">2</td></tr>
+            <tr><td class="mono">3</td><td class="mono">GPA2, kaki 23</td><td class="mono">3</td></tr>
+            <tr><td class="mono">4</td><td class="mono">GPA3, kaki 24</td><td class="mono">4</td></tr>
+            <tr><td class="mono">5</td><td class="mono">GPA4, kaki 25</td><td class="mono">5</td></tr>
+            <tr><td class="mono">6</td><td class="mono">GPA5, kaki 26</td><td class="mono">6</td></tr>
+            <tr><td class="mono">7</td><td class="mono">GPA6, kaki 27</td><td class="mono">7</td></tr>
+            <tr><td class="mono">8</td><td class="mono">GPA7, kaki 28</td><td class="mono">8</td></tr>
+            <tr><td class="mono">9</td><td class="mono">GPB0, kaki 1</td><td class="mono">9</td></tr>
+            <tr><td class="mono">10</td><td class="mono">GPB1, kaki 2</td><td class="mono">hapus (←)</td></tr>
+            <tr><td class="mono">11</td><td class="mono">GPB2, kaki 3</td><td class="mono">0</td></tr>
+            <tr><td class="mono">12</td><td class="mono">GPB3, kaki 4</td><td class="mono">Enter (↵)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th scope="col">Komponen per jalur</th><th scope="col">Nilai</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>R1, seri ke gate</td><td class="mono">220 Ω 1/4 W</td></tr>
+            <tr><td>R2, gate ke GND</td><td class="mono">10 kΩ 1/4 W</td></tr>
+            <tr><td>Q, MOSFET logic-level</td><td class="mono">IRLZ44N / AO3400</td></tr>
+            <tr><td>D, dioda flyback</td><td class="mono">1N5819 / 1N4007</td></tr>
+            <tr><td>Solenoid push-pull</td><td class="mono">12 V</td></tr>
+            <tr><td>Terminal sekrup</td><td class="mono">2 pin</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p>Urutan jalur ini sama dengan <code>KEYMAP</code> di <code>config.h</code>. Kalau kabel solenoid terpasang di tombol yang berbeda, cukup ubah <code>KEYMAP</code>, tidak perlu menyolder ulang.</p>
+  </section>
+
+  <section aria-labelledby="s-steps">
+    <h2 id="s-steps">Urutan merakit dan menguji</h2>
+    <ol class="steps">
+      <li>Sambungkan adaptor ke LM2596 saja, lalu putar trimpot sampai multimeter di OUT menunjukkan 5,0 V. Baru setelah itu sambungkan ke ESP32-CAM.</li>
+      <li>Rakit satu jalur di breadboard. Tempelkan sementara kabel dari 3V3 ke ujung R1: solenoid harus menekan, lalu lepas saat kabel dicabut.</li>
+      <li>Sambungkan ESP32-CAM ke MCP23017, upload firmware, buka Serial Monitor. Pastikan muncul "MCP23017 siap" dan "Kamera: siap" pada perintah <code>info</code>.</li>
+      <li>Ketik <code>tekan 1</code> untuk menguji jalur pertama dari firmware.</li>
+      <li>Gandakan sampai 12 jalur, lalu jalankan <code>test</code>. Solenoid harus bergerak urut dari tombol 1 sampai Enter.</li>
+      <li>Pasang rangka di meteran dan jalankan <code>test</code> lagi. Kalau ada tombol yang tidak terdaftar di layar meteran, naikkan <code>KEY_PRESS_MS</code> atau turunkan posisi solenoid itu.</li>
+      <li>Ketik <code>foto</code> dan cek hasilnya dari dashboard. Atur fokus lensa dan <code>CAMERA_VFLIP</code> sampai angka di layar meteran terbaca.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="s-safe">
+    <h2 id="s-safe">Pengaman</h2>
+    <div class="warn" role="note">
+      <strong>Meteran adalah milik PLN dan bersegel.</strong>
+      <span>Alat ini hanya menekan tombol dari luar. Jangan membuka, mengebor, atau menyambung kabel apa pun ke dalam meteran.</span>
+    </div>
+    <ul class="notes">
+      <li>Jangan pernah menyambung solenoid langsung ke pin ESP32-CAM atau MCP23017. Arusnya ratusan kali lebih besar dari kemampuan pin.</li>
+      <li>Perhatikan arah dioda: sisi bergaris (katoda) ke +12 V. Kalau terbalik, jalur itu terhubung singkat saat MOSFET menyala.</li>
+      <li>Pakai kapasitor dengan rating minimal 25 V di jalur 12 V. Kapasitor 16 V terlalu mepet untuk 12 V.</li>
+      <li>Jangan menyalakan ESP32-CAM dari USB board MB dan dari LM2596 bersamaan. Lepas board MB setelah upload pertama.</li>
+      <li>Solenoid hanya boleh menyala sesaat. Firmware mematikannya paksa setelah 400 ms, dan me-reset MCP23017 kalau perintah mati tidak terkirim.</li>
+      <li>Kalau memakai solenoid 5 V: ganti adaptor dengan 5 V 3 A, buang LM2596, dan sambungkan 5 V adaptor langsung ke ESP32-CAM dan ke jalur solenoid. Kapasitor 1000 µF di dekat ESP32-CAM jadi wajib, karena tarikan solenoid bisa membuatnya restart.</li>
+    </ul>
+  </section>
+
+  <footer>Firmware: <code>firmware/tokenin_esp32cam</code>. Pin bisa diubah di <code>config.h</code>, tapi skema ini mengikuti nilai bawaannya.</footer>
+</main>

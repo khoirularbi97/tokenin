@@ -78,6 +78,15 @@ export async function updateProgress(deviceId, jobId, stage, index) {
 }
 
 async function finish(jobId, ok, error) {
+  // Kunci alat dilepas SEBELUM menulis ke database. Begitu dashboard melihat perintah
+  // selesai, perintah berikutnya harus langsung bisa diterima.
+  for (const [deviceId, active] of hub.activeJobs) {
+    if (active.jobId === jobId) {
+      clearTimeout(active.timer);
+      hub.activeJobs.delete(deviceId);
+    }
+  }
+
   const { rows } = await query(
     `UPDATE jobs SET status = $2, error = $3, finished_at = now(),
             progress = CASE WHEN $2 = 'done' AND kind = 'topup' THEN 21 ELSE progress END
@@ -86,12 +95,6 @@ async function finish(jobId, ok, error) {
   );
   const job = rows[0];
   if (!job) return null;
-
-  const active = hub.activeJobs.get(job.device_id);
-  if (active && active.jobId === job.id) {
-    clearTimeout(active.timer);
-    hub.activeJobs.delete(job.device_id);
-  }
 
   const owner = await query('SELECT owner_id FROM devices WHERE id = $1', [job.device_id]);
   if (owner.rows[0]) await notifyJob(owner.rows[0].owner_id, job);
